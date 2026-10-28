@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Inside the Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;800&display=swap">
+</head>
+<body>
+
+<!-- ===================== HERO ===================== -->
+<header class="wrap hero" id="top">
+  <p class="ui-sm">Practical AI agent workflows / an interactive walk-through</p>
+  <h1 class="hero-spec" aria-label="Agents">AGENTS</h1>
+  <div class="hero-sub">
+    <p class="display-m" style="max-width:16ch">What happens between the prompt and the answer.</p>
+    <p class="ui-xs">Based on a talk by Sabrina Goldfarb · 13 stops · every demo runs in your browser</p>
+  </div>
+  <div class="stack">
+    <p class="ui-sm">Our product today: a career guide that answers three questions in order</p>
+    <div class="trip"><span>01 What career fits?</span><em>→</em><span>02 What training gets me there?</span><em>→</em><span>03 How do I pay for it?</span></div>
+  </div>
+  <div class="grid">
+    <div class="mod tone mint c4"><p class="ui-sm">Scorecard / A</p><b>Context</b><p class="body-sm">How much do we have to hold in the window? Less is better.</p></div>
+    <div class="mod tone pink c4"><p class="ui-sm">Scorecard / B</p><b>Reliability</b><p class="body-sm">Run it 100 times. How often is it right?</p></div>
+    <div class="mod tone hl c4"><p class="ui-sm">Scorecard / C</p><b>Cost</b><p class="body-sm">Money, latency and engineering effort.</p></div>
+  </div>
+  <p class="note">Every pattern below gets graded on these three. Scroll, or use the chapter bar at the bottom.</p>
+</header>
+
+<main>
+<!-- 01 AGENT -->
+<section class="scene wrap" id="s-agent" data-label="01 Agent">
+  <div class="scene-head">
+    <p class="eyebrow ui-sm">01 / <b>what is an agent</b></p>
+    <h2 class="display-m">A model that can act, remember and plan</h2>
+    <p class="lede body-lg">A reasoning model thinks hard and then answers from what it already knows. An agent puts that model in a loop: think, use a tool, look at the result, think again. It can do things, it knows things beyond its training, and it plans its next step.</p>
+  </div>
+  <div class="grid">
+    <div class="ctrl c4">
+      <p class="ui-sm">Who answers?</p>
+      <div class="presets" role="group" aria-label="System type">
+        <button class="preset" data-a="llm" aria-pressed="false">Reasoning LLM</button>
+        <button class="preset" data-a="agent" aria-pressed="true">Agent</button>
+      </div>
+      <p class="body-sm">“I’m creative and love helping people. What careers fit, what programs get me there, and how do I pay for it?”</p>
+      <button class="btn" id="a-run">▶ Ask</button>
+      <div class="stack">
+        <p class="ui-xs">What this system has</p>
+        <div class="glyphs" style="grid-template-columns:repeat(3,minmax(0,1fr))" id="a-caps">
+          <div class="glyph" data-cap="do"><b>T</b><span>tools · can do</span></div>
+          <div class="glyph" data-cap="know"><b>M</b><span>memory · knows</span></div>
+          <div class="glyph" data-cap="think"><b>P</b><span>planning · thinks</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="panel c8">
+      <div class="row" style="justify-content:space-between"><p class="ui-sm">Trace</p><p class="ui-xs" id="a-status">Press Ask</p></div>
+      <div class="log" id="a-log" aria-live="polite"></div>
+      <div class="readout">
+        <div class="stat"><span class="ui-xs">model calls</span><span class="v" id="a-calls">0</span></div>
+        <div class="stat"><span class="ui-xs">tool calls</span><span class="v" id="a-tools">0</span></div>
+        <div class="stat"><span class="ui-xs">uses live data</span><span class="v" id="a-live">—</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 02 TOOLS -->
+<section class="scene wrap" id="s-tools" data-label="02 Tools + MCP">
+  <div class="scene-head">
+    <p class="eyebrow ui-sm">02 / <b>tools and mcp</b></p>
+    <h2 class="display-m">One plug shape for every tool</h2>
+    <p class="lede body-lg">Tools let a model reach outside itself: call an API, run code, ask another model. The Model Context Protocol standardizes how that call travels. An MCP server offers tools, an MCP client calls them, and the result goes back into the model’s context. MCP fixes the transport and format, not the tool, so the same server works with any client.</p>
+  </div>
+  <div class="grid">
+    <div class="ctrl c4">
+      <p class="ui-sm">Tool</p>
+      <div class="presets" role="group" aria-label="Tool" id="t-tools">
+        <button class="preset" data-t="0" aria-pressed="true">careers.search</button>
+        <button class="preset" data-t="1" aria-pressed="false">programs.find</button>
+        <button class="preset" data-t="2" aria-pressed="false">aid.apply</button>
+      </div>
+      <p class="ui-sm">Client</p>
+      <div class="presets" role="group" aria-label="Client" id="t-clients">
+        <button class="preset" data-c="Claude" aria-pressed="true">Claude</button>
+        <button class="preset" data-c="Copilot" aria-pressed="false">Copilot</button>
+        <button class="preset" data-c="Your app" aria-pressed="false">Your app</button>
+      </div>
+      <div class="tog"><button class="tog-btn" role="switch" aria-checked="false" id="t-write" aria-labelledby="t-write-l"><span class="tog-track"></span></button><span><span class="tog-lbl" id="t-write-l">Allow write tools</span><span class="tog-state" id="t-write-s">read only</span></span></div>
+      <button class="btn" id="t-run">▶ Send the call</button>
+    </div>
+    <div class="panel c8">
+      <div class="lane" id="t-lane" style="--n:4">
+        <div class="node"><b>LLM</b><small>decides to call a tool</small></div>
+        <div class="node"><b>MCP client</b><small id="t-cl">inside Claude</small></div>
+        <div class="node"><b>MCP server</b><small>lists tools · checks guardrails</small></div>
+        <div class="node"><b>API</b><small id="t-api">career database</small></div>
+      </div>
+      <pre class="code" id="t-msg" aria-live="polite">// Pick a tool and press Send.</pre>
+      <p class="verdict" id="t-verdict">Read-only tools can only look things up. Write tools change something in the world, so they should sit behind a guardrail.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 03 SKILLS -->
+<section class="scene wrap" id="s-skills" data-label="03 Skills">
+  <div class="scene-head">
+    <p class="eyebrow ui-sm">03 / <b>skills</b></p>
+    <h2 class="display-m">Instructions that wait until they’re needed</h2>
+    <p class="lede body-lg">A skill is a folder with a required SKILL.md, plus optional scripts and reference files. Only its short name and description sit in context at first. The full instructions load when a task actually calls for them. Skills complement MCP rather than replace it, and because they can contain executable code, only install them from sources you trust.</p>
+  </div>
+  <div class="grid">
+    <div class="ctrl c4">
+      <p class="ui-sm">Loading strategy</p>
+      <div class="presets" role="group" aria-label="Loading strategy" id="k-mode">
+        <button class="preset" data-m="all" aria-pressed="false">Load all up front</button>
+        <button class="preset" data-m="skills" aria-pressed="true">Progressive</button>
+      </div>
+      <p class="ui-sm">Task</p>
+      <div class="stack" role="radiogroup" aria-label="Task" id="k-task">
+        <label class="sel"><input type="radio" name="k-task" value="none" checked> Just chatting</label>
+        <label class="sel"><input type="radio" name="k-task" value="report"> Write a career report</label>
+        <label class="sel"><input type="radio" name="k-task" value="aid"> Find scholarships</label>
+        <label class="sel"><input type="radio" name="k-task" value="both"> Report + scholarships</label>
+      </div>
+    </div>
+    <div class="panel c8">
+      <div class="row" style="justify-content:space-between"><p class="ui-sm">Context window · 12,000 tokens</p><p class="ui-xs" id="k-free"></p></div>
+      <div class="meter" id="k-meter" role="img" aria-label="Context usage"></div>
+      <div class="legend ui-xs">
+        <span><i class="seg-sys"></i>System prompt</span><span><i class="seg-conv"></i>Conversation</span><span><i class="seg-meta"></i>Skill names + descriptions</span><span><i class="seg-skill"></i>Full SKILL.md</span>
+      </div>
+      <div class="glyphs" style="grid-template-columns:repeat(4,minmax(0,1fr))" id="k-skills"></div>
+      <p class="verdict" id="k-verdict"></p>
+    </div>
+  </div>
+</section>
+
+<!-- 04 RAG -->
+<section class="scene wrap" id="s-rag" data-label="04 RAG">
+  <div class="scene-head">
+    <p class="eyebrow ui-sm">04 / <b>retrieval augmented generation</b></p>
+    <h2 class="display-m">Fetch only what this question needs</h2>
+    <p class="lede body-lg">Context is finite and expensive. RAG ingests documents, chunks them, turns each chunk into a vector, stores it, and at question time retrieves the closest few by similarity and adds them to the prompt. A re-ranker takes a second, more careful pass over what was retrieved. The model gets relevant facts without the whole library, and it hallucinates less.</p>
+  </div>
+  <div class="grid">
+    <div class="ctrl c4">
+      <div class="field"><label for="r-q">Question</label><input id="r-q" value="scholarships for a UX design bootcamp" autocomplete="off"></div>
+      <div class="stack"><p class="ui-sm">Chunks into context (k)</p>
+        <div class="stepper"><button class="circ sm" id="r-km" aria-label="Fewer chunks"><svg viewBox="0 0 16 16"><path d="M3 8h10" stroke="currentColor" stroke-width="1.2"/></svg></button><output id="r-k">[ 3 ]</output><button class="circ sm" id="r-kp" aria-label="More chunks"><svg viewBox="0 0 16 16"><path d="M3 8h10M8 3v10" stroke="currentColor" stroke-width="1.2"/></svg></button></div>
+      </div>
+      <div class="tog"><button class="tog-btn" role="switch" aria-checked="false" id="r-rr" aria-labelledby="r-rr-l"><span class="tog-track"></span></button><span><span class="tog-lbl" id="r-rr-l">Re-ranker</span><span class="tog-state" id="r-rr-s">off</span></span></div>
+      <button class="btn" id="r-run">▶ Retrieve</button>
+    </div>
+    <div class="panel c8">
+      <div class="pipe" id="r-pipe"><div>Ingest</div><div>Chunk</div><div>Embed</div><div>Store</div><div>Retrieve</div><div>Augment</div></div>
+      <div class="hits" id="r-hits" aria-live="polite"></div>
+      <p class="verdict" id="r-verdict"></p>
+      <p class="note">Similarity here is word overlap between your question and each chunk, a stand-in for real embedding vectors.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 05 MEMORY -->
+<section class="scene wrap" id="s-memory" data-label="05 Memory">
+  <div class="scene-head">
+    <p class="eyebrow ui-sm">05 / <b>short and long term memory</b></p>
+    <h2 class="display-m">The model forgets. The agent decides what it keeps.</h2>
+    <p class="lede body-lg">LLMs are stateless: on each call, the context window is everything the model knows. The agent carries a running state of goal, conversation, tool results and notes, and has to choose what fits. Anything older lives in long-term memory and is fetched back when needed.</p>
+  </div>
+  <div class="grid">
+    <div class="ctrl c4">
+      <div class="axis"><span class="ui-sm">Window size</span><div class="axis-track"><input type="range" id="m-cap" min="1500" max="6000" step="500" value="3000" aria-label="Context window size in tokens"><span class="axis-val" id="m-capv">3k</span></div></div>
+      <p class="ui-sm">When it overflows</p>
+      <div class="presets" role="group" aria-label="Overflow strategy" id="m-strat">
+        <button class="preset" data-s="drop" aria-pressed="true">Drop oldest</button>
+        <button class="preset" data-s="sum" aria-pressed="false">Summarize oldest</button>
+      </div>
+      <div class="row">
+        <button class="btn-o" id="m-turn">+ User turn</button>
+        <button class="btn-o" id="m-tool">+ Tool result</button>
+        <button class="btn-o" id="m-note">+ Note</button>
+      </div>
+      <button class="btn-o" id="m-reset" style="align-self:flex-start">Reset</button>
+    </div>
+    <div class="panel c5">
+      <div class="row" style="justify-content:space-between"><p class="ui-sm">Short term · this call</p><p class="ui-xs" id="m-used"></p></div>
+      <div class="win" id="m-win" aria-live="polite"></div>
+    </div>
+    <div class="mod c3">
+      <p class="ui-sm">Long term</p>
+      <div class="glyphs" style="grid-template-columns:repeat(3,minmax(0,1fr))" id="m-lt">
+        <button class="glyph" data-lt="0" aria-pressed="true"><b>S</b><span>semantic</span></button>
+        <button class="glyph" data-lt="1" aria-pressed="false"><b>E</b><span>episodic</span></button>
+        <button class="glyph" data-lt="2" aria-pressed="false"><b>P</b><span>procedural</span></button>
+      </div>
+      <div class="stack" id="m-ltp" aria-live="polite"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 06 PLANNING -->
+<section class="scene wrap" id="s-plan" data-label="06 Planning">
+  <div class="scene-head">
+    <p class="eyebrow ui-sm">06 / <b>planning</b></p>
+    <h2 class="display-m">A plan is a hypothesis</h2>
+    <p class="lede body-lg">Without planning, agents lose the goal halfway through a multi-step task. Plan-then-execute writes every step up front and then runs them: fewer model calls, but slow to adapt. ReAct (reason + act, not the UI library) thinks after every observation, so it can change course when something breaks.</p>
+  </div>
+  <div class="grid">
+    <div class="ctrl c4">
+      <p class="ui-sm">Pattern</p>
+      <div class="presets" role="group" aria-label="Planning pattern" id="p-mode">
+        <button class="preset" data-p="react" aria-pressed="true">ReAct</button>
+        <button class="preset" data-p="plan" aria-pressed="false">Plan then execute</button>
+      </div>
+      <div class="tog"><button class="tog-btn" role="switch" aria-checked="true" id="p-fail" aria-labelledby="p-fail-l"><span class="tog-track"></span></button><span><span class="tog-lbl" id="p-fail-l">Loans API is down</span><span class="tog-state" id="p-fail-s">step 3 will fail</span></span></div>
+      <button class="btn" id="p-run">▶ Run the agent</button>
+    </div>
+    <div class="panel c8">
+      <div class="log" id="p-log" aria-live="polite"></div>
+      <div class="readout">
+        <div class="stat"><span class="ui-xs">model calls</span><span class="v" id="p-calls">0</span></div>
+        <div class="stat"><span class="ui-xs">changed course</span><span class="v" id="p-adapt">—</span></div>
+        <div class="stat"><span class="ui-xs">answer complete</span><span class="v" id="p-done">—</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 07 REFLECTION -->
+<section class="scene wrap" id="s-reflect" data-label="07 Reflection">
+  <div class="scene-head">
+    <p class="eyebrow ui-sm">07 / <b>reflection</b></p>
+    <h2 class="display-m">Check the work, write down the lesson, try again</h2>
+    <p class="lede body-lg">Self-refine has the model critique its own draft. Reflexion reacts to an outside failure, like a failed test, and writes a lesson learned for the next attempt. More rounds buy accuracy with latency and money, so the loop needs a hard stop. The checks you choose decide what “done” means.</p>
+  </div>
+  <div class="grid">
+    <div class="ctrl c4">
+      <p class="ui-sm">The evaluator checks that the answer…</p>
+      <div class="stack" id="f-crit">
+        <label class="sel"><input type="checkbox" value="0" checked> Names three careers</label>
+        <label class="sel"><input type="checkbox" value="1" checked> Gives program costs</label>
+        <label class="sel"><input type="checkbox" value="2" checked> Covers grants, not just loans</label>
+      </div>
+      <div class="stack"><p class="ui-sm">Max rounds</p>
+        <div class="stepper"><button class="circ sm" id="f-m" aria-label="Fewer rounds"><svg viewBox="0 0 16 16"><path d="M3 8h10" stroke="currentColor" stroke-width="1.2"/></svg></button><output id="f-max">[ 4 ]</output><button class="circ sm" id="f-p" aria-label="More rounds"><svg viewBox="0 0 16 16"><path d="M3 8h10M8 3v10" stroke="currentColor" stroke-width="1.2"/></svg></button></div>
+      </div>
+      <button class="btn" id="f-run">▶ Start the loop</button>
+    </div>
+    <div class="panel c8">
+      <div class="log" id="f-log" aria-live="polite"></div>
+      <div class="readout">
+        <div class="stat"><span class="ui-xs">rounds</span><span class="v" id="f-rounds">0</span></div>
+        <div class="stat"><span class="ui-xs">model calls</span><span class="v" id="f-calls">0</span></div>
+        <div class="stat"><span class="ui-xs">context used</span><span class="v" id="f-ctx">0</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 08 CONTROL -->
+<section class="scene wrap" id="s-control" data-label="08 Control">
+  <div class="scene-head">
+    <p class="eyebrow ui-sm">08 / <b>how much do i control?</b></p>
+    <h2 class="display-m">Who draws the arrows?</h2>
+    <p class="lede body-lg">Every system below is boxes and arrows. The only real question is who decides which arrow gets followed next.</p>
+  </div>
+  <div class="grid">
+    <div class="ctrl c4">
+      <div class="presets" role="group" aria-label="System kind" id="c-mode">
+        <button class="preset" data-c="wf" aria-pressed="true">Workflow</button>
+        <button class="preset" data-c="single" aria-pressed="false">Single agent</button>
+        <button class="preset" data-c="multi" aria-pressed="false">Multi-agent</button>
+      </div>
+      <p class="display-s" id="c-quote"></p>
+      <p class="body-sm" id="c-body"></p>
+    </div>
+    <div class="panel c8">
+      <div class="dgbox"><svg viewBox="0 0 600 260" id="c-svg" role="img" aria-label="Control diagram"></svg></div>
+    </div>
+  </div>
+</section>
+
+<!-- 09 WORKFLOWS -->
+<section class="scene wrap" id="s-workflows" data-label="09 Workflows">
+  <div class="scene-head">
+    <p class="eyebrow ui-sm">09 / <b>workflows with llms, not agents</b></p>
+    <h2 class="display-m">You write the arrows</h2>
+    <p class="lede body-lg">Five fixed shapes. Each LLM call has one job, and code decides what runs next. Pick a pattern and run the career guide through it.</p>
+  </div>
+  <div class="grid">
+    <div class="ctrl c4">
+      <div class="presets" role="group" aria-label="Workflow pattern" id="w-mode">
+        <button class="preset" data-w="chain" aria-pressed="true">Chaining</button>
+        <button class="preset" data-w="route" aria-pressed="false">Routing</button>
+        <button class="preset" data-w="par" aria-pressed="false">Parallel</button>
+        <button class="preset" data-w="eval" aria-pressed="false">Evaluator</button>
+        <button class="preset" data-w="orch" aria-pressed="false">Orchestrator</button>
+      </div>
+      <div class="field" id="w-qf" hidden><label for="w-q">Incoming question</label><input id="w-q" value="Are there grants for trade school?" autocomplete="off"></div>
+      <button class="btn" id="w-run">▶ Run the workflow</button>
+      <p class="body-sm" id="w-desc"></p>
+    </div>
+    <div class="panel c8">
+      <div class="dgbox"><svg viewBox="0 0 600 300" id="w-svg" role="img" aria-label="Workflow diagram"></svg></div>
+      <div class="readout">
+        <div class="stat"><span class="ui-xs">llm calls</span><span class="v" id="w-calls">—</span></div>
+        <div class="stat"><span class="ui-xs">latency</span><span class="v" id="w-lat">—</span></div>
+        <div class="stat"><span class="ui-xs">route taken</span><span class="v" id="w-route" style="font-size:20px">—</span></div>
+      </div>
+      <p class="verdict" id="w-verdict"></p>
+    </div>
+  </div>
+  <div class="grid">
+    <div class="mod c4"><p class="ui-sm">Workflow scorecard / context</p><p class="body-sm">Bounded. Each step sees only what you hand it.</p></div>
+    <div class="mod c4"><p class="ui-sm">Workflow scorecard / reliability</p><p class="body-sm">You can test every step on its own.</p></div>
+    <div class="mod c4"><p class="ui-sm">Workflow scorecard / cost</p><p class="body-sm">You control exactly how many calls happen.</p></div>
+  </div>
+</section>
+
+<!-- 10 SINGLE AGENT / CODEACT -->
+<section class="scene wrap" id="s-single" data-label="10 Single agent">
+  <div class="scene-head">
+    <p class="eyebrow ui-sm">10 / <b>single agent systems</b></p>
+    <h2 class="display-m">Let the model pick the arrows</h2>
+    <p class="lede body-lg">ReAct, plan-and-execute and reflexion all run inside one agent loop. CodeAct changes what an action is: instead of one JSON tool call per turn, the agent writes a short program that calls several tools at once. Code is all over its training data; your custom tool schema isn’t. The catch: you are now running model-written code, so it belongs in a sandbox.</p>
+  </div>
+  <div class="grid">
+    <div class="ctrl c4">
+      <p class="ui-sm">Action format</p>
+      <div class="presets" role="group" aria-label="Action format" id="x-mode">
+        <button class="preset" data-x="json" aria-pressed="true">JSON tool calls</button>
+        <button class="preset" data-x="code" aria-pressed="false">CodeAct</button>
+      </div>
+      <div class="stack"><p class="ui-sm">Careers to research</p>
+        <div class="stepper"><button class="circ sm" id="x-m" aria-label="Fewer careers"><svg viewBox="0 0 16 16"><path d="M3 8h10" stroke="currentColor" stroke-width="1.2"/></svg></button><output id="x-n">[ 3 ]</output><button class="circ sm" id="x-p" aria-label="More careers"><svg viewBox="0 0 16 16"><path d="M3 8h10M8 3v10" stroke="currentColor" stroke-width="1.2"/></svg></button></div>
+      </div>
+      <div class="tog"><button class="tog-btn" role="switch" aria-checked="true" id="x-sb" aria-labelledby="x-sb-l"><span class="tog-track"></span></button><span><span class="tog-lbl" id="x-sb-l">Sandbox</span><span class="tog-state" id="x-sb-s">on · restricted runtime</span></span></div>
+    </div>
+    <div class="panel c8">
+      <pre class="code" id="x-code"></pre>
+      <div class="readout">
+        <div class="stat"><span class="ui-xs">model turns</span><span class="v" id="x-turns">0</span></div>
+        <div class="stat"><span class="ui-xs">tool calls</span><span class="v" id="x-tc">0</span></div>
+        <div class="stat"><span class="ui-xs">safe to run</span><span class="v" id="x-safe">yes</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="grid">
+    <div class="mod c4"><p class="ui-sm">Single agent / context</p><p class="body-sm">Worse than a workflow. One window holds everything.</p></div>
+    <div class="mod c4"><p class="ui-sm">Single agent / reliability</p><p class="body-sm">Worse. You don’t know how many steps it will take, so you can’t count the places it can go wrong.</p></div>
+    <div class="mod c4"><p class="ui-sm">Single agent / cost</p><p class="body-sm">Above a workflow, below multi-agent. What you buy is adaptability.</p></div>
+  </div>
+</section>
+
+<!-- 11 MULTI-AGENT -->
+<section class="scene wrap" id="s-multi" data-label="11 Multi-agent">
+  <div class="scene-head">
+    <p class="eyebrow ui-sm">11 / <b>multi-agent systems</b></p>
+    <h2 class="display-m">Agents that hand work to agents</h2>
+    <p class="lede body-lg">Each box is now a full agent that can plan, use tools and reflect. The shapes echo the workflows, but every hop costs more, and the model also chooses who decides next.</p>
+  </div>
+  <div class="grid">
+    <div class="ctrl c4">
+      <div class="presets" role="group" aria-label="Multi-agent pattern" id="ma-mode">
+        <button class="preset" data-ma="seq" aria-pressed="true">Sequential</button>
+        <button class="preset" data-ma="par" aria-pressed="false">Parallel</button>
+        <button class="preset" data-ma="sup" aria-pressed="false">Supervisor</button>
+        <button class="preset" data-ma="disp" aria-pressed="false">Dispatcher</button>
+        <button class="preset" data-ma="eval" aria-pressed="false">Evaluator</button>
+        <button class="preset" data-ma="p2p" aria-pressed="false">Peer-to-peer</button>
+      </div>
+      <div class="stack" id="ma-nwrap"><p class="ui-sm">Agents</p>
+        <div class="stepper"><button class="circ sm" id="ma-m" aria-label="Fewer agents"><svg viewBox="0 0 16 16"><path d="M3 8h10" stroke="currentColor" stroke-width="1.2"/></svg></button><output id="ma-n">[ 3 ]</output><button class="circ sm" id="ma-p" aria-label="More agents"><svg viewBox="0 0 16 16"><path d="M3 8h10M8 3v10" stroke="currentColor" stroke-width="1.2"/></svg></button></div>
+      </div>
+      <button class="btn" id="ma-run">▶ Run the agents</button>
+      <p class="body-sm" id="ma-desc"></p>
+    </div>
+    <div class="panel c8">
+      <div class="dgbox"><svg viewBox="0 0 600 330" id="ma-svg" role="img" aria-label="Multi-agent diagram"></svg></div>
+      <div class="grid" style="gap:var(--s16) var(--s32)">
+        <div class="stack c6" id="ma-score"></div>
+        <div class="stack c6">
+          <div class="stat"><span class="ui-xs">links agents must know about</span><span class="v" id="ma-links">0</span></div>
+          <p class="body-sm" id="ma-note"></p>
+        </div>
+      </div>
+      <p class="note">Bar lengths are relative ratings drawn from the talk’s scorecards, not measurements. Longer is better for context and reliability; longer means more expensive or slower for cost and latency.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 12 EVALS -->
+<section class="scene wrap" id="s-evals" data-label="12 Evals">
+  <div class="scene-head">
+    <p class="eyebrow ui-sm">12 / <b>evaluations</b></p>
+    <h2 class="display-m">Right once, or right every time?</h2>
+    <p class="lede body-lg">Leaderboards usually show one column, reliability, and hide cost and context. Many benchmarks run once. Two metrics tell different stories: pass@k asks whether at least one of k tries succeeds, and rises with k. pass^k asks whether all k succeed, and falls. Customer-facing agents live on pass^k.</p>
+  </div>
+  <div class="grid">
+    <div class="ctrl c4">
+      <div class="axis"><span class="ui-sm">Single-try success</span><div class="axis-track"><input type="range" id="e-p" min="50" max="99" step="1" value="85" aria-label="Single-try success rate, percent"><span class="axis-val" id="e-pv">85%</span></div></div>
+      <div class="stack"><p class="ui-sm">Tries (k)</p>
+        <div class="stepper"><button class="circ sm" id="e-km" aria-label="Fewer tries"><svg viewBox="0 0 16 16"><path d="M3 8h10" stroke="currentColor" stroke-width="1.2"/></svg></button><output id="e-k">[ 5 ]</output><button class="circ sm" id="e-kp" aria-label="More tries"><svg viewBox="0 0 16 16"><path d="M3 8h10M8 3v10" stroke="currentColor" stroke-width="1.2"/></svg></button></div>
+      </div>
+      <button class="btn" id="e-run">▶ Run 100 tasks</button>
+      <div class="info"><button class="info-tr" aria-expanded="false" aria-controls="e-info" id="e-it"><span>(i) Build your own evals</span><span class="ind blink"></span></button>
+        <div class="info-p" id="e-info" hidden><span class="ui-xs">From the talk</span>Start with 20–50 simple tasks taken from real failures. Clear pass/fail beats a vague rubric. Test when a behavior should happen and when it shouldn’t. Run in clean environments close to production, with as little extra setup as possible.</div>
+      </div>
+    </div>
+    <div class="panel c8">
+      <div class="readout">
+        <div class="stat"><span class="ui-xs">pass@k · at least one</span><span class="v" id="e-at">—</span></div>
+        <div class="stat"><span class="ui-xs">pass^k · all of them</span><span class="v" id="e-all">—</span></div>
+      </div>
+      <div class="dgbox"><svg viewBox="0 0 560 240" id="e-svg" role="img" aria-label="pass@k and pass^k as k grows"></svg></div>
+      <div class="stack">
+        <div class="row" style="justify-content:space-between"><p class="ui-sm">100 tasks × k tries</p><p class="ui-xs" id="e-tally" aria-live="polite">Press Run</p></div>
+        <div class="trials" id="e-grid"></div>
+        <div class="legend ui-xs"><span><i style="background:var(--mcnk-text-reading)"></i>all k passed</span><span><i style="background:var(--mcnk-surface-highlight)"></i>some passed</span><span><i style="background:var(--mcnk-action-pink)"></i>none passed</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 13 CHOOSE -->
+<section class="scene wrap" id="s-choose" data-label="13 Choose">
+  <div class="scene-head">
+    <p class="eyebrow ui-sm">13 / <b>so, what do i use and when?</b></p>
+    <h2 class="display-m">Start with the least autonomy that works</h2>
+    <p class="lede body-lg">Answer two questions about your task.</p>
+  </div>
+  <div class="grid">
+    <div class="ctrl c6">
+      <fieldset class="stack" style="border:0;padding:0;margin:0"><legend class="ui-sm" style="margin-bottom:8px">Do you know the steps every time?</legend>
+        <label class="sel"><input type="radio" name="q1" value="yes" checked> Yes, maybe one hard step in the middle</label>
+        <label class="sel"><input type="radio" name="q1" value="no"> No, the path changes per request</label>
+      </fieldset>
+      <fieldset class="stack" style="border:0;padding:0;margin:0"><legend class="ui-sm" style="margin-bottom:8px">Does it split into independent subproblems?</legend>
+        <label class="sel"><input type="radio" name="q2" value="no" checked> No, it’s one connected job</label>
+        <label class="sel"><input type="radio" name="q2" value="yes"> Yes, parts can run on their own</label>
+      </fieldset>
+    </div>
+    <div class="panel hl c6" style="background:var(--mcnk-surface-highlight)" aria-live="polite">
+      <p class="ui-sm">Reach for</p>
+      <p class="display-l" id="q-ans" style="font-size:clamp(44px,7vw,88px)">Workflow</p>
+      <p class="body-lg" id="q-why"></p>
+      <a class="btn-o" id="q-go" href="#s-workflows" style="align-self:flex-start;text-decoration:none">See the patterns</a>
+    </div>
+  </div>
+</section>
+
+<!-- RECAP -->
+<section class="scene wrap" id="s-recap" data-label="Recap">
+  <div class="scene-head">
+    <p class="eyebrow ui-sm">recap / <b>the whole trip</b></p>
+    <h2 class="display-m">From one call to a team of agents</h2>
+    <p class="lede body-lg">Every step up adds adaptability and takes away predictability. Jump back to any stop.</p>
+  </div>
+  <div class="glyphs" id="recap"></div>
+  <div class="row"><button class="btn" id="replay">▶ Replay the trip</button></div>
+</section>
+</main>
+
+<footer class="wrap">
+  <p class="ui-xs">Content adapted from “Practical AI Agent Workflows” by Sabrina Goldfarb. Interactives, timings and ratings are illustrative, simplified to show proportions rather than measurements.</p>
+  <p class="ui-xs">Set in IBM Plex Mono and Inter, the GT Mechanik system’s explicit fallbacks. Real buttons and labels, live regions for results, 44px targets, reduced-motion support.</p>
+</footer>
+
+<nav class="navbar" aria-label="Chapters">
+  <a class="brand" href="#top">AGT–WF</a>
+  <div class="nav-items" id="nav-items"></div>
+  <span class="nav-now" id="nav-now" aria-live="polite">Start</span>
+  <a class="btn-o" href="#s-choose" style="text-decoration:none">What to use</a>
+</nav>
+
+<script type="module" src="/src/main.js"></script>
+
+</body>
+</html>
